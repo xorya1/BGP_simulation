@@ -1,0 +1,97 @@
+print "*** ENST AS connectivity ***\n"
+
+bgp options msg-monitor "enst.msg"
+
+net add node 137.194.1.1
+net add node 88.160.1.1
+net add node 134.157.1.1
+net add node 4.1.1.1
+net add node 62.229.1.1
+
+net add link 137.194.1.1 88.160.1.1
+net add link 137.194.1.1 134.157.1.1
+net add link 88.160.1.1 4.1.1.1
+net add link 62.229.1.1 134.157.1.1
+net add link 62.229.1.1 4.1.1.1
+
+net node 137.194.1.1 route add --oif=134.157.1.1 134.157.0.0/16 5
+net node 137.194.1.1 route add --oif=88.160.1.1 88.160.0.0/11 5
+net node 88.160.1.1 route add --oif=4.1.1.1 4.0.0.0/8 5
+net node 88.160.1.1 route add --oif=137.194.1.1 137.194.0.0/16 5
+net node 4.1.1.1 route add --oif=88.160.1.1 88.160.0.0/11 5
+net node 134.157.1.1 route add --oif=137.194.1.1 137.194.0.0/16 5
+net node 62.229.1.1 route add --oif=134.157.1.1 134.157.0.0/16 5
+net node 62.229.1.1 route add --oif=4.1.1.1 4.0.0.0/8 5
+net node 134.157.1.1 route add --oif=62.229.1.1 62.229.0.0/16 5
+net node 4.1.1.1 route add --oif=62.229.1.1 62.229.0.0/16 5
+
+bgp add router 1712 137.194.1.1
+bgp add router 12322 88.160.1.1
+bgp add router 2200 134.157.1.1
+bgp add router 3356 4.1.1.1
+bgp add router 5511 62.229.1.1
+bgp router 62.229.1.1
+    add network 62.229.0.0/16
+    add peer 3356 4.1.1.1
+    add peer 2200 134.157.1.1
+    peer 4.1.1.1 up
+    peer 134.157.1.1 up
+
+bgp router 137.194.1.1
+    add network 137.194.0.0/16
+    add peer 12322 88.160.1.1
+    add peer 2200 134.157.1.1
+    peer 88.160.1.1 up
+    peer 134.157.1.1 up
+    peer 88.160.1.1
+        filter in
+        add-rule
+            match any
+            action "local-pref 200"
+        exit
+        exit
+        filter out
+        add-rule
+            match "community is 1"
+            action deny
+        exit
+        exit
+    exit
+    peer 134.157.1.1
+        filter in
+        add-rule
+            match any
+            action "local-pref 100"
+        exit
+        exit
+        filter out
+        add-rule
+            match "community is 1"
+            action deny
+        exit
+        exit
+    exit
+
+bgp router 88.160.1.1
+    add network 88.160.0.0/11
+    add peer 1712 137.194.1.1
+    add peer 3356 4.1.1.1
+    peer 137.194.1.1 up
+    peer 4.1.1.1 up
+
+bgp router 134.157.1.1
+    add network 134.157.0.0/16
+    add peer 5511 62.229.1.1
+    add peer 1712 137.194.1.1
+    peer 62.229.1.1 up
+    peer 137.194.1.1 up
+
+bgp router 4.1.1.1
+    add network 4.0.0.0/8
+    add network 212.73.192.0/18
+    add peer 12322 88.160.1.1
+    add peer 5511 62.229.1.1
+    peer 88.160.1.1 up
+    peer 62.229.1.1 up
+
+sim run
